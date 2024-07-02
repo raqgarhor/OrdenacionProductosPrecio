@@ -47,10 +47,24 @@ const create = async function (req, res) {
   }
 }
 
+/*
+Se desea ofrecer a los propietarios que los productos de sus restaurantes aparezcan ordenados según el campo order de la
+entidad Producto o según el campo price del producto, y que puedan determinar cual será el orden predeterminado en cada
+restaurante, de manera que cuando se listen los productos aparezcan siempre según el orden que haya decidido.
+
+Recuerde que actualmente los productos se muestran en la pantalla de detalle del restaurante y el backend los devuelve
+siempre ordenados según el campo order. Por defecto, cada restaurante ordenará sus productos según el mencionado campo order.
+*/
+// SOLUCION
 const show = async function (req, res) {
   // Only returns PUBLIC information of restaurants
   try {
-    const restaurant = await Restaurant.findByPk(req.params.restaurantId, {
+    let restaurant = await Restaurant.findByPk(req.params.restaurantId)
+    const orderingBy = restaurant.orderByPrice
+      ? [[{ model: Product, as: 'products' }, 'price', 'ASC']]
+      : [[{ model: Product, as: 'products' }, 'order', 'ASC']]
+
+    restaurant = await Restaurant.findByPk(req.params.restaurantId, {
       attributes: { exclude: ['userId'] },
       include: [{
         model: Product,
@@ -61,7 +75,7 @@ const show = async function (req, res) {
         model: RestaurantCategory,
         as: 'restaurantCategory'
       }],
-      order: [[{ model: Product, as: 'products' }, 'order', 'ASC']]
+      order: orderingBy
     }
     )
     res.json(restaurant)
@@ -95,12 +109,49 @@ const destroy = async function (req, res) {
   }
 }
 
+// SOLUCION
+/*
+const orderingBy = async function (req, res) {
+  const t = await sequelizeSession.transaction()
+  try {
+    const restaurantChange = Restaurant.findByPk(req.params.restaurantId)
+    if (restaurantChange.orderByPrice) {
+      await restaurantChange.update({ orderByPrice: false }, { transaction: t })
+    } else {
+      await restaurantChange.update({ orderByPrice: true }, { transaction: t })
+    }
+    await t.commit()
+    const orderRestaurant = await restaurantChange.save()
+    res.json(orderRestaurant)
+  } catch (err) {
+    await t.rollback()
+    res.status(500).send(err)
+  }
+} */
+
+// SOLUCION
+const orderingBy = async function (req, res) {
+  try {
+    const restaurant = await Restaurant.findByPk(req.params.restaurantId)
+    if (!restaurant.orderByPrice) {
+      restaurant.orderByPrice = true
+    } else {
+      restaurant.orderByPrice = false
+    }
+    const orderRestaurant = await restaurant.save()
+    res.json(orderRestaurant)
+  } catch (err) {
+    res.status(500).send(err)
+  }
+}
+
 const RestaurantController = {
   index,
   indexOwner,
   create,
   show,
   update,
-  destroy
+  destroy,
+  orderingBy
 }
 export default RestaurantController

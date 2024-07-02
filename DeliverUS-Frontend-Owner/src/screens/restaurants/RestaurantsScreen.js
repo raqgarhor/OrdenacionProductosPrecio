@@ -2,7 +2,7 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { StyleSheet, FlatList, Pressable, View } from 'react-native'
 
-import { getAll, remove } from '../../api/RestaurantEndpoints'
+import { getAll, orderBy, remove } from '../../api/RestaurantEndpoints'
 import ImageCard from '../../components/ImageCard'
 import TextSemiBold from '../../components/TextSemibold'
 import TextRegular from '../../components/TextRegular'
@@ -40,6 +40,9 @@ export default function RestaurantsScreen ({ navigation, route }) {
           <TextSemiBold>Avg. service time: <TextSemiBold textStyle={{ color: GlobalStyles.brandPrimary }}>{item.averageServiceMinutes} min.</TextSemiBold></TextSemiBold>
         }
         <TextSemiBold>Shipping: <TextSemiBold textStyle={{ color: GlobalStyles.brandPrimary }}>{item.shippingCosts.toFixed(2)}€</TextSemiBold></TextSemiBold>
+        {/* SOLUCION */}
+        <TextRegular textStyle={{ textAlign: 'right' }}>Currently sorting products<TextSemiBold> by {item.orderByPrice ? 'price' : 'default'}</TextSemiBold></TextRegular>
+        {/* SOLUCION */}
         <View style={styles.actionButtonsContainer}>
           <Pressable
             onPress={() => navigation.navigate('EditRestaurantScreen', { id: item.id })
@@ -77,6 +80,25 @@ export default function RestaurantsScreen ({ navigation, route }) {
             </TextRegular>
           </View>
         </Pressable>
+        {/* SOLUCION */}
+        <Pressable
+            onPress={() => { orderRestaurant(item) }}
+            style={({ pressed }) => [
+              {
+                backgroundColor: pressed
+                  ? GlobalStyles.brandSecondaryTap
+                  : GlobalStyles.brandSecondary
+              },
+              styles.actionButton
+            ]}>
+          <View style={[{ flex: 1, flexDirection: 'row', justifyContent: 'center' }]}>
+            <MaterialCommunityIcons name='sort' color={'white'} size={20}/>
+            <TextRegular textStyle={styles.text}>
+              Order by: {item.orderByPrice ? 'price' : 'default'}
+            </TextRegular>
+          </View>
+        </Pressable>
+        {/* SOLUCION */}
         </View>
       </ImageCard>
     )
@@ -153,6 +175,30 @@ export default function RestaurantsScreen ({ navigation, route }) {
     }
   }
 
+  // SOLUCION
+  const orderRestaurant = async (restaurant) => {
+    try {
+      const modifiedRestaurant = await orderBy(restaurant.id)
+      if (modifiedRestaurant) {
+        await fetchRestaurants()
+        showMessage({
+          message: `Restaurant ${restaurant.name} succesfully ordered by ${restaurant.orderByPrice ? 'price' : 'default'}`,
+          type: 'success',
+          style: GlobalStyles.flashStyle,
+          titleStyle: GlobalStyles.flashTextStyle
+        })
+      }
+    } catch (error) {
+      console.log(error)
+      showMessage({
+        message: `Restaurant ${restaurant.name} could not be ordered.`,
+        type: 'error',
+        style: GlobalStyles.flashStyle,
+        titleStyle: GlobalStyles.flashTextStyle
+      })
+    }
+  }
+
   return (
     <>
     <FlatList
@@ -201,7 +247,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     bottom: 5,
     position: 'absolute',
-    width: '90%'
+    width: '63%'
   },
   text: {
     fontSize: 16,
